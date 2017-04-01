@@ -6,16 +6,10 @@ from aqt.qt import QAction, SIGNAL
 from anki.utils import stripHTML
 from .log import logger
 from collections import defaultdict
-import sys
+
 
 class MergeNotes():
     def __init__(self):
-        self.tag_from = u"MERGE_FROM"
-        self.tag_to = u"MERGE_TO"
-        self.tag_was_merged_from = u"WAS_MERGED_FROM"
-        self.tag_was_merged_to = u"WAS_MERGED_TO"
-        self.match_field = u"Expression"
-
         self.field_merge_modes = {
             u'Note': "merge_ft",
             u'Kunyomi_story': "from",
@@ -39,30 +33,30 @@ class MergeNotes():
 
         self.tag_merge_mode = "merge"
 
+        self.dry = False
+        self.strip_html = True
+        self.strip_html_permanently = True
+
+        self.tag_from = u"MERGE_FROM"
+        self.tag_to = u"MERGE_TO"
+        self.tag_was_merged_from = u"WAS_MERGED_FROM"
+        self.tag_was_merged_to = u"WAS_MERGED_TO"
+        self.match_field = u"Expression"
+
     def setup_menu(self, browser):
         """ Adds a menu item to Anki's browser. Will be called via hook.
         :param browser:
         :return:
         """
-        # todo: add option to only perform this on the selected notes
         logger.debug("Setting up menu.")
         a = QAction("Merge Notes", browser)
         browser.form.menuEdit.addAction(a)
-        browser.connect(a, SIGNAL("triggered()"), self.loop)
+        browser.connect(a, SIGNAL("triggered()"),
+                        lambda loop: self.loop(self.strip_html,
+                                               self.strip_html_permanently,
+                                               self.dry))
 
-    def strip_html_match_field(self):
-        nids_from = mw.col.findNotes(u'tag:"{}"'.format(self.tag_from))
-        nids_to = mw.col.findNotes(u'tag:"{}"'.format(self.tag_from))
-        nids = nids_from + nids_to
-        logger.debug("Stripping HTML from field {} from {} from notes"
-                     "and {} to notes".format(self.match_field,
-                                              len(nids_from),
-                                              len(nids_to)))
-        for nid in nids:
-            note = mw.col.getNote(nid)
-            note[self.match_field] = stripHTML(note[self.match_field])
-
-    def loop(self, strip_html=True, dry=False):
+    def loop(self, strip_html, permanently_strip_html, dry):
         nids_from = mw.col.findNotes(u'tag:"{}"'.format(self.tag_from))
         nids_to = mw.col.findNotes(u'tag:"{}"'.format(self.tag_to))
 
@@ -72,7 +66,7 @@ class MergeNotes():
         logger.debug("Found {} notes with tag_to {}".format(len(nids_to),
                                                               self.tag_to))
 
-        if strip_html:
+        if permanently_strip_html:
             logger.debug("Stripping HTML from match field from all notes")
             for nid in nids_from + nids_to:
                 note = mw.col.getNote(nid)
@@ -91,11 +85,17 @@ class MergeNotes():
 
         for nid in nids_from:
             note = mw.col.getNote(nid)
-            nids_from_dict[note["Expression"]].append(nid)
+            expr = note["Expression"]
+            if strip_html:
+                expr = strip_html(expr).strip()
+            nids_from_dict[expr].append(nid)
 
         for nid in nids_to:
             note = mw.col.getNote(nid)
-            nids_to_dict[note["Expression"]].append(nid)
+            expr = note["Expression"]
+            if strip_html:
+                expr = strip_html(expr).strip()
+            nids_to_dict[expr].append(nid)
 
         ok = []
         zero_from = []      # nothing to update, that's ok
@@ -188,7 +188,6 @@ class MergeNotes():
         note_from.flush()
 
         logger.debug(note_from[self.match_field]+"after"+ str(type(note_from.tags))+ str(list(note_from.tags))+ str(list(note_to.tags)))
-
 
     @staticmethod
     def merge_fields(field_from, field_to, merge_mode):
