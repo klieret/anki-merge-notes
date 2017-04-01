@@ -6,11 +6,14 @@ from aqt.qt import QAction, SIGNAL
 from anki.utils import stripHTML
 from .log import logger
 from collections import defaultdict
+import sys
 
 class MergeNotes():
     def __init__(self):
-        self.tag_from = u"merge_readings"
-        self.tag_to = u"merge_koohii"
+        self.tag_from = u"MERGE_FROM"
+        self.tag_to = u"MERGE_TO"
+        self.tag_was_merged_from = u"WAS_MERGED_FROM"
+        self.tag_was_merged_to = u"WAS_MERGED_TO"
         self.match_field = u"Expression"
 
         self.field_merge_modes = {
@@ -61,7 +64,7 @@ class MergeNotes():
 
     def loop(self, strip_html=True, dry=False):
         nids_from = mw.col.findNotes(u'tag:"{}"'.format(self.tag_from))
-        nids_to = mw.col.findNotes(u'tag:"{}"'.format(self.tag_from))
+        nids_to = mw.col.findNotes(u'tag:"{}"'.format(self.tag_to))
 
         logger.debug("Found {} notes with tag_from {}".format(len(nids_from),
                                                               self.tag_from))
@@ -70,17 +73,21 @@ class MergeNotes():
                                                               self.tag_to))
 
         if strip_html:
-            logger.debug("Stripping HTML from field {} from all notes")
+            logger.debug("Stripping HTML from match field from all notes")
             for nid in nids_from + nids_to:
                 note = mw.col.getNote(nid)
-                note[self.match_field] = stripHTML(note[self.match_field])
-                note.flush()
+                old = note[self.match_field]
+                new = stripHTML(note[self.match_field]).strip()
+                if not old == new:
+                    logger.debug(u"Changed match field from {} to {}".format(
+                        old, new))
+                    note[self.match_field] = new
+                    note.flush()
 
         logger.debug("looping to build db")
 
         nids_from_dict = defaultdict(list)
         nids_to_dict = defaultdict(list)
-
 
         for nid in nids_from:
             note = mw.col.getNote(nid)
@@ -95,8 +102,9 @@ class MergeNotes():
         zero_to = []        # bad, don't have a candidate to merge into
         many_from = []      # bad
         many_to = []        # bad, too many candidates to merge into
+        # todo: check if has tags was_merged_from/to and exclude those
 
-        for expr in nids_to_dict.keys() + nids_to_dict.keys():
+        for expr in nids_to_dict.keys() + nids_from_dict.keys():
             num_from = len(nids_from_dict[expr])
             num_to = len(nids_to_dict[expr])
             if num_from == 0:
@@ -106,40 +114,38 @@ class MergeNotes():
 
             if num_to == 0:
                 zero_to.append(expr)
-            elif num_to >=2:
+            elif num_to >= 2:
                 many_to.append(expr)
 
             if num_from == 1 and num_to == 1:
                 ok.append(expr)
 
-        logger.debug("Statistics: \n"
-                     "ok: {}\n"
-                     "zero_from: {}\n"
-                     "zero_to: {}\n"
-                     "many_from: {}\n"
-                     "many_to: {}\n".format(ok, zero_from, zero_to, many_from,
-                                            many_to))
+        # remove duplicates
+        ok = list(set(ok))
+        zero_from = list(set(zero_from))
+        zero_to = list(set(zero_to))
+        many_from = list(set(many_from))
+        many_to = list(set(many_to))
 
+        logger.debug(u"Statistics: \n"
+                     u"ok: {}\n"
+                     u"zero_from: {}\n"
+                     u"zero_to: {}\n"
+                     u"many_from: {}\n"
+                     u"many_to: {}\n".format(u', '.join(ok),
+                                             u', '.join(zero_from),
+                                             u', '.join(zero_to),
+                                             u', '.join(many_from),
+                                             u', '.join(many_to)))
 
-        # for nid_from in nids_from:
-        #     note_from = mw.col.getNote(nid_from)
-        #     nids_to = mw.col.findNotes(u'tag:"{}" "{}":"{}"'.format(
-        #         self.tag_to, self.match_field, note_from[self.match_field]))
-        #
-        #
-        #     match_field = note_from[self.match_field]
-        #
-        #     if len(nids_to) == 0:
-        #         zero.append(match_field)
-        #     elif len(nids_to) >= 2:
-        #         many.append(match_field)
-        #     elif len(nids_to) == 1:
-        #         ok.append(match_field)
-        #         note_to = mw.col.getNote(nids_to[0])
-        #         #self.merge_notes(note_from, note_to)
-        #         #self.merge_tags(note_from, note_to)
-        #         # todo: uncomment something here to do sth
+        if dry:
+            return
 
+        for expr in ok:
+            note_from = mw.col.getNote(nids_from_dict[expr][0])
+            note_to = mw.col.getNote(nids_to_dict[expr][0])
+            self.merge_notes(note_from, note_to)
+            self.merge_tags(note_from, note_to)
 
     def merge_notes(self, note_from, note_to):
         if not set(note_from.keys()) == set(note_to.keys()):
@@ -154,6 +160,7 @@ class MergeNotes():
     def merge_tags(self, note_from, note_to):
         tags_from = note_from.tags
         tags_to = note_to.tags
+        logger.debug(note_from[self.match_field]+"before"+ str(type(note_from.tags))+ str(list(note_from.tags))+ str(list(note_to.tags)))
         if self.tag_merge_mode == "merge":
             new_tags_to = list(set(tags_from) | set(tags_to))
         elif self.tag_merge_mode == "from":
@@ -165,9 +172,23 @@ class MergeNotes():
         # IMPORTANT: do not copy the tag self.tag_from to the target note
         # also remove self.tag_to, so that we know which notes have been merged
         # and which have yet to be merged.
-        new_tags_to.remove(self.tag_from)
-        new_tags_to.remove(self.tag_to)
-        note_to.tags = list(new_tags_to)
+        for tag in [self.tag_from, self.tag_to]:
+            if tag in new_tags_to:
+                new_tags_to.remove(tag)
+        new_tags_to.append(self.tag_was_merged_to)
+        note_to.tags = list(set(new_tags_to))
+        note_to.flush()
+
+        new_tags_from = note_from.tags
+        for tag in [self.tag_from]:
+            if tag in new_tags_from:
+                new_tags_from.remove(tag)
+        new_tags_from.append(self.tag_was_merged_from)
+        note_from.tags = list(set(new_tags_from))
+        note_from.flush()
+
+        logger.debug(note_from[self.match_field]+"after"+ str(type(note_from.tags))+ str(list(note_from.tags))+ str(list(note_to.tags)))
+
 
     @staticmethod
     def merge_fields(field_from, field_to, merge_mode):
