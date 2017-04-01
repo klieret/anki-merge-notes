@@ -160,7 +160,7 @@ class MergeNotes():
     def merge_tags(self, note_from, note_to):
         tags_from = note_from.tags
         tags_to = note_to.tags
-        logger.debug(note_from[self.match_field]+"before"+ str(type(note_from.tags))+ str(list(note_from.tags))+ str(list(note_to.tags)))
+        #logger.debug(note_from[self.match_field]+"before"+ str(type(note_from.tags))+ str(list(note_from.tags))+ str(list(note_to.tags)))
         if self.tag_merge_mode == "merge":
             new_tags_to = list(set(tags_from) | set(tags_to))
         elif self.tag_merge_mode == "from":
@@ -187,7 +187,7 @@ class MergeNotes():
         note_from.tags = list(set(new_tags_from))
         note_from.flush()
 
-        logger.debug(note_from[self.match_field]+"after"+ str(type(note_from.tags))+ str(list(note_from.tags))+ str(list(note_to.tags)))
+        #logger.debug(note_from[self.match_field]+"after"+ str(type(note_from.tags))+ str(list(note_from.tags))+ str(list(note_to.tags)))
 
     @staticmethod
     def merge_fields(field_from, field_to, merge_mode):
