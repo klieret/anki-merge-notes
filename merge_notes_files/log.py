@@ -12,7 +12,7 @@ logger.setLevel(logging.DEBUG)
 
 # todo: set level higher once we have everything working
 sh_info = logging.StreamHandler(stream=sys.stdout)
-sh_info.setLevel(logging.WARNING)
+sh_info.setLevel(logging.DEBUG)
 
 # will be caught by anki and displayed in a pop-up window
 sh_error = logging.StreamHandler(stream=sys.stderr)
