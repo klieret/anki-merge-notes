@@ -8,8 +8,27 @@ from .log import logger
 from collections import defaultdict
 
 
-class MergeNotes():
+class MergeNotes(object):
     def __init__(self):
+        # @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        #                       BEGIN CONFIGURATION
+        # @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+        # --------------------- FIELD MERGE MODES -----------------------------
+
+        # Merge modes for the field contents as a dictionary of the form
+        #   ```field name (unicode string) : merge mode (string)```
+        # where merge mode is one of the following 4 options
+        # *  ```from``` (the field value of the to note will be that of the
+        #    from note)
+        # * ```to``` (the field value of the to note will be that of the to
+        #    note, i.e. we do not change anything)
+        # * ```merge_ft``` (the field value of the to note will be
+        #   field value of from note + line break + field value of to note
+        # * ```merge_tf``` (the field value of the to note will be
+        #   field value of to note + line break + field value of from note
+        # Note: Every field name of the from and to notes must be assigned a
+        #       merge mode, else an error will be displayed!
         self.field_merge_modes = {
             u'Note': "merge_ft",
             u'Kunyomi_story': "from",
@@ -31,17 +50,47 @@ class MergeNotes():
             u'Onyomi': "from"
         }
 
+        # --------------------- TAG MERGE MODES -------------------------------
+
+        # Mode to merge the tags of the from notes and to notes. Choose from
+        # 3 modes:
+        # *  ```from```
+        # *  ```to```
+        # *  ```merge```
+        # With meaning as above.
+        # Note that the special tags defined below will be set automatically.
         self.tag_merge_mode = "merge"
 
-        self.dry = False
+        # --------------------- MATCH CONTROL-- -------------------------------
+
+        # Which field should be compared to find out which notes should be
+        # merged together?
+        self.match_field = u"Expression"
+
+        # When comparing self.match_field, strip all HTML around the field
+        # value (i.e. notes with match_field "<b>Test</b>" and "Test" are
+        # still recognized to be merged
         self.strip_html = True
+        # Permanently strip the html of the self.match_field
         self.strip_html_permanently = True
 
+        # --------------------- RUN CONTROL-- -------------------------------
+
+        # Dry run: Only compare notes and display which notes can be merged,
+        # but do not do any merging
+        self.dry = False
+
+        # @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        #                       END CONFIGURATION
+        # @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+        # Those two tags controll which notes are from notes and which are
+        # to notes. If a note either acted as a to_note or from_note, the
+        # respective tag is replaced with the two tags below.
         self.tag_from = u"MERGE_FROM"
         self.tag_to = u"MERGE_TO"
         self.tag_was_merged_from = u"WAS_MERGED_FROM"
         self.tag_was_merged_to = u"WAS_MERGED_TO"
-        self.match_field = u"Expression"
 
     def setup_menu(self, browser):
         """ Adds a menu item to Anki's browser. Will be called via hook.
