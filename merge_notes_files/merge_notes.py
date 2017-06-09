@@ -100,10 +100,10 @@ class MergeNotes(object):
         logger.debug("Setting up menu.")
         a = QAction("Merge Notes", browser)
         browser.form.menuEdit.addAction(a)
-        browser.connect(a, SIGNAL("triggered()"),
-                        lambda loop: self.loop(self.strip_html,
-                                               self.strip_html_permanently,
-                                               self.dry))
+        browser.connect(a, SIGNAL("triggered()"), 
+                        self.loop(self.strip_html,
+                                  self.strip_html_permanently,
+                                  self.dry))
 
     def loop(self, strip_html, permanently_strip_html, dry):
         nids_from = mw.col.findNotes(u'tag:"{}"'.format(self.tag_from))
