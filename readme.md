@@ -1,4 +1,4 @@
-# [RUDIMENTARY] Anki Addon: Merging Notes 
+# Anki Addon: Merging Notes 
 
 Plugin for [Anki](https://apps.ankiweb.net/), a spaced repetition flashcard program.
 
@@ -6,6 +6,8 @@ Plugin to merge a set of notes (*from_notes*) into another set of notes (*to_not
 
 **THIS IS QUITE RUDIMENTARY: Originally only made this for a one time use. Leaving this here for anyone who may need it.
 PLEASE BACKUP YOUR COLLECTION BEFORE EXPERIMENTING WITH IT!**
+
+There is also another addon by [vgck](https://github.com/vgck) which is also about merging notes: [Link to Addon](https://github.com/vgck/merge-notes), so also consider using this. That one also copies scheduling information but maybe allows for a bit less configuration (?). 
 
 ## Merging procedure
 
