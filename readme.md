@@ -1,5 +1,7 @@
 # [RUDIMENTARY] Anki Addon: Merging Notes 
 
+**[Overview over my other Anki add-ons](http://www.lieret.net/opensource/#anki)**
+
 Plugin for [Anki](https://apps.ankiweb.net/), a spaced repetition flashcard program.
 
 Plugin to merge a set of notes (*from_notes*) into another set of notes (*to_notes*), i.e. to update the to_notes with information from the from_notes.
