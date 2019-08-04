@@ -13,8 +13,6 @@ There is also another addon by [vgck](https://github.com/vgck) which is also abo
 
 ## Merging procedure
 
-Notes of both sets must have *exactly* the same fields. If this is not the case, e.g. use the standard Anki interface to change the note type of the from_notes to that of the to_notes, or rename each of the fields.
-
 Then
 
 1. **BACKUP** your collection (main menu: ```File``` → ```Export```)

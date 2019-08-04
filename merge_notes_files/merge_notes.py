@@ -22,13 +22,12 @@ class MergeNotes(object):
         # *  ```from``` (the field value of the to note will be that of the
         #    from note)
         # * ```to``` (the field value of the to note will be that of the to
-        #    note, i.e. we do not change anything)
+        #    note, i.e. we do not change anything -- in this case you can also
+        #    leave out the field)
         # * ```merge_ft``` (the field value of the to note will be
         #   field value of from note + line break + field value of to note
         # * ```merge_tf``` (the field value of the to note will be
         #   field value of to note + line break + field value of from note
-        # Note: Every field name of the from and to notes must be assigned a
-        #       merge mode, else an error will be displayed!
         self.field_merge_modes = {
             u'Note': "merge_ft",
             u'Kunyomi_story': "from",
@@ -196,10 +195,10 @@ class MergeNotes(object):
             self.merge_tags(note_from, note_to)
 
     def merge_notes(self, note_from, note_to):
-        if not set(note_from.keys()) == set(note_to.keys()):
-            raise ValueError, "not compatible notes"
-        if not set(note_from.keys()) == set(self.field_merge_modes.keys()):
-            raise ValueError, "merge_fields modes doesn't have the right keys"
+        if not set(note_to.keys()).issuperset(set(note_to.keys())):
+            raise ValueError, "note_to fields are missing some keys"
+        if not set(note_from.keys()).issuperset(set(self.field_merge_modes.keys())):
+            raise ValueError, "note_from fields are missing some keys"
         for key in self.field_merge_modes.keys():
             note_to[key] = self.merge_fields(note_from[key], note_to[key],
                                              self.field_merge_modes[key])

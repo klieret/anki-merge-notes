@@ -1,4 +1,4 @@
 #!/bin/bash
 
-cp merge_notes.py ~/Documents/Anki/addons
-cp -r merge_notes_files ~/Documents/Anki/addons
+cp merge_notes.py ~/.local/share/Anki2/addons
+cp -r merge_notes_files ~/.local/share/Anki2/addons
