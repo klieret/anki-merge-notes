@@ -134,14 +134,14 @@ class MergeNotes(object):
 
         for nid in nids_from:
             note = mw.col.getNote(nid)
-            expr = note["Expression"]
+            expr = note[self.match_field]
             if strip_html:
                 expr = strip_html(expr).strip()
             nids_from_dict[expr].append(nid)
 
         for nid in nids_to:
             note = mw.col.getNote(nid)
-            expr = note["Expression"]
+            expr = note[self.match_field]
             if strip_html:
                 expr = strip_html(expr).strip()
             nids_to_dict[expr].append(nid)
@@ -153,7 +153,7 @@ class MergeNotes(object):
         many_to = []        # bad, too many candidates to merge into
         # todo: check if has tags was_merged_from/to and exclude those
 
-        for expr in nids_to_dict.keys() + nids_from_dict.keys():
+        for expr in list(nids_to_dict.keys()) + list(nids_from_dict.keys()):
             num_from = len(nids_from_dict[expr])
             num_to = len(nids_to_dict[expr])
             if num_from == 0:
