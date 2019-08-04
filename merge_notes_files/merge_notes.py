@@ -120,7 +120,9 @@ class MergeNotes(object):
             for nid in nids_from + nids_to:
                 note = mw.col.getNote(nid)
                 old = note[self.match_field]
-                new = stripHTML(note[self.match_field]).strip()
+                if not isinstance(old, str):
+                    continue
+                new = stripHTML(old).strip()
                 if not old == new:
                     logger.debug(u"Changed match field from {} to {}".format(
                         old, new))
@@ -134,14 +136,14 @@ class MergeNotes(object):
 
         for nid in nids_from:
             note = mw.col.getNote(nid)
-            expr = note[self.match_field]
+            expr = str(note[self.match_field])
             if strip_html:
                 expr = strip_html(expr).strip()
             nids_from_dict[expr].append(nid)
 
         for nid in nids_to:
             note = mw.col.getNote(nid)
-            expr = note[self.match_field]
+            expr = str(note[self.match_field])
             if strip_html:
                 expr = strip_html(expr).strip()
             nids_to_dict[expr].append(nid)
