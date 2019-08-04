@@ -100,12 +100,9 @@ class MergeNotes(object):
         logger.debug("Setting up menu.")
         a = QAction("Merge Notes", browser)
         browser.form.menuEdit.addAction(a)
-        browser.connect(a, SIGNAL("triggered()"), 
-                        self.loop(self.strip_html,
-                                  self.strip_html_permanently,
-                                  self.dry))
+        browser.connect(a, SIGNAL("triggered()"), self.loop)
 
-    def loop(self, strip_html, permanently_strip_html, dry):
+    def loop(self, *arsg, **kwargs):
         nids_from = mw.col.findNotes(u'tag:"{}"'.format(self.tag_from))
         nids_to = mw.col.findNotes(u'tag:"{}"'.format(self.tag_to))
 
@@ -115,7 +112,7 @@ class MergeNotes(object):
         logger.debug("Found {} notes with tag_to {}".format(len(nids_to),
                                                               self.tag_to))
 
-        if permanently_strip_html:
+        if self.strip_html_permanently:
             logger.debug("Stripping HTML from match field from all notes")
             for nid in nids_from + nids_to:
                 note = mw.col.getNote(nid)
@@ -137,15 +134,15 @@ class MergeNotes(object):
         for nid in nids_from:
             note = mw.col.getNote(nid)
             expr = str(note[self.match_field])
-            if strip_html:
-                expr = strip_html(expr).strip()
+            if self.strip_html:
+                expr = stripHTML(expr).strip()
             nids_from_dict[expr].append(nid)
 
         for nid in nids_to:
             note = mw.col.getNote(nid)
             expr = str(note[self.match_field])
-            if strip_html:
-                expr = strip_html(expr).strip()
+            if self.strip_html:
+                expr = stripHTML(expr).strip()
             nids_to_dict[expr].append(nid)
 
         ok = []
@@ -189,7 +186,7 @@ class MergeNotes(object):
                                              u', '.join(many_from),
                                              u', '.join(many_to)))
 
-        if dry:
+        if self.dry:
             return
 
         for expr in ok:
