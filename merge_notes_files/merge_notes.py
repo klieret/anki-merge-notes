@@ -112,7 +112,7 @@ class MergeNotes(object):
         logger.debug("Found {} notes with tag_to {}".format(len(nids_to),
                                                               self.tag_to))
 
-        if self.strip_html_permanently:
+        if self.strip_html_permanently and not self.dry:
             logger.debug("Stripping HTML from match field from all notes")
             for nid in nids_from + nids_to:
                 note = mw.col.getNote(nid)
