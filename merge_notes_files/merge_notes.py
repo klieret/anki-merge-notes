@@ -30,22 +30,10 @@ class MergeNotes(object):
         #   field value of to note + line break + field value of from note
         self.field_merge_modes = {
             u'Note': "merge_ft",
-            u'Kunyomi_story': "from",
-            u'Keyword': "to",
-            u'Heisig_index': "to",
-            u'Image': "merge_ft",
-            u'Other_meanings': "from",
-            u'Audio': "merge_ft",
             u'Kunyomi': "from",
-            u'Diagram': "to",
-            u'Combined_story': "from",
-            u'Examples': "from",
-            u'Number_of_readings': "from",
             u'Kanji_story': "to",
             u'Onyomi_story': "from",
             u'Expression': "to",
-            u'Signal': "from",
-            u'Keyword_notes': "merge_ft",
             u'Onyomi': "from"
         }
 
@@ -199,10 +187,24 @@ class MergeNotes(object):
             self.merge_tags(note_from, note_to)
 
     def merge_notes(self, note_from, note_to):
-        if not set(note_to.keys()).issuperset(set(note_to.keys())):
-            raise ValueError, "note_to fields are missing some keys"
-        if not set(note_from.keys()).issuperset(set(self.field_merge_modes.keys())):
-            raise ValueError, "note_from fields are missing some keys"
+        missing_to = [
+            key for key in self.field_merge_modes if not key in note_to
+        ]
+        if missing_to:
+            msg = "note_to fields are missing key(s) {}".format(
+                ", ".join(missing_to)
+            )
+            logger.critical(msg)
+            raise ValueError, msg
+        missing_from = [
+            key for key in self.field_merge_modes if not key in note_from
+        ]
+        if missing_from:
+            msg = "note_from fields are missing key(s) {}".format(
+                ", ".join(missing_from)
+            )
+            logger.critical(msg)
+            raise ValueError, msg
         for key in self.field_merge_modes.keys():
             note_to[key] = self.merge_fields(note_from[key], note_to[key],
                                              self.field_merge_modes[key])
