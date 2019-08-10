@@ -165,8 +165,8 @@ class MergeNotes(object):
     def merge_field(self, notes_from, note_to, field):
         if field not in note_to:
             logger.warning(
-                "Could not find field '{}' in note_to with match "
-                "field '{}'".format(field, note_to[self.match_field])
+                u"Could not find field '{}' in note_to with match "
+                u"field '{}'".format(field, note_to[self.match_field])
             )
             return
         field_to = note_to[field]
@@ -174,8 +174,8 @@ class MergeNotes(object):
         for note_from in notes_from:
             if field not in note_from:
                 logger.warning(
-                    "Could not find field '{}' in note_from with match "
-                    "field '{}'".format(field, note_to[self.match_field])
+                    u"Could not find field '{}' in note_from with match "
+                    u"field '{}'".format(field, note_to[self.match_field])
                 )
                 continue
             fields_from.append(note_from[field])
