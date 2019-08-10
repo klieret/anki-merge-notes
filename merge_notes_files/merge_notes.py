@@ -93,6 +93,15 @@ class MergeNotes(object):
         browser.form.menuEdit.addAction(a)
         browser.connect(a, SIGNAL("triggered()"), self.loop)
 
+    def get_match_field(self, nid):
+        note = mw.col.getNote(nid)
+        expr = note[self.match_field]
+        if not isinstance(expr, (str, unicode)):
+            return None
+        if self.strip_html:
+            expr = stripHTML(expr).strip()
+        return expr
+
     def loop(self, *arsg, **kwargs):
         nids_from = mw.col.findNotes(u'tag:"{}"'.format(self.tag_from))
         nids_to = mw.col.findNotes(u'tag:"{}"'.format(self.tag_to))
@@ -109,29 +118,20 @@ class MergeNotes(object):
         nids_to_dict = defaultdict(list)
 
         for nid in nids_from:
-            note = mw.col.getNote(nid)
-            expr = note[self.match_field]
-            if not isinstance(expr, (str, unicode)):
-                continue
-            if self.strip_html:
-                expr = stripHTML(expr).strip()
-            nids_from_dict[expr].append(nid)
+            nids_from_dict[self.get_match_field(nid)].append(nid)
 
         for nid in nids_to:
-            note = mw.col.getNote(nid)
-            expr = note[self.match_field]
-            if not isinstance(expr, (str, unicode)):
-                continue
-            if self.strip_html:
-                expr = stripHTML(expr).strip()
-            nids_to_dict[expr].append(nid)
+            nids_to_dict[self.get_match_field(nid)].append(nid)
+
+        # Remove None (corresponds to not properly retrieved expressions)
+        del nids_from_dict[None]
+        del nids_to_dict[None]
 
         ok = []
         zero_from = []      # nothing to update, that's ok
         zero_to = []        # bad, don't have a candidate to merge into
         many_from = []      # bad
         many_to = []        # bad, too many candidates to merge into
-        # todo: check if has tags was_merged_from/to and exclude those
 
         for expr in list(nids_to_dict.keys()) + list(nids_from_dict.keys()):
             num_from = len(nids_from_dict[expr])
