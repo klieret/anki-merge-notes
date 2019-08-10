@@ -134,8 +134,8 @@ class MergeNotes(object):
             nids_to_dict[self.get_match_field_from_nid(nid)].append(nid)
 
         # Remove None (corresponds to not properly retrieved expressions)
-        del nids_from_dict[None]
-        del nids_to_dict[None]
+        nids_from_dict.pop(None, None)
+        nids_to_dict.pop(None, None)
 
         all_exprs = list(nids_from_dict.keys()) + list(nids_to_dict.keys())
 
