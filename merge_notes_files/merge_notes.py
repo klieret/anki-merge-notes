@@ -8,37 +8,35 @@ from .log import logger
 from collections import defaultdict
 
 
+def remove_duplicates_preserve_order(lst):
+    """ Remove all duplicates from list lst but do not mess up the order
+    of them. """
+    # https://stackoverflow.com/questions/480214/
+    seen = set()
+    seen_add = seen.add
+    return [x for x in lst if not (x in seen or seen_add(x))]
+
+
 class MergeNotes(object):
     def __init__(self):
         # @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
         #                       BEGIN CONFIGURATION
         # @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-        # --------------------- FIELD MERGE MODES -----------------------------
+        # --------------------- FIELDS TO MERGE -------------------------------
 
-        # Merge modes for the field contents as a dictionary of the form
-        #   ```field name (unicode string) : merge mode (string)```
-        # where merge mode is one of the following 4 options
-        # *  ```from``` (the field value of the to note will be that of the
-        #    from note)
-        # * ```to``` (the field value of the to note will be that of the to
-        #    note, i.e. we do not change anything -- in this case you can also
-        #    leave out the field)
-        # * ```merge_ft``` (the field value of the to note will be
-        #   field value of from note + line break + field value of to note
-        # * ```merge_tf``` (the field value of the to note will be
-        #   field value of to note + line break + field value of from note
-        self.field_merge_modes = {
-            u'Note': "merge_ft",
-            u'Kunyomi': "from",
-            u'Kanji_story': "to",
-            u'Onyomi_story': "from",
-            u'Expression': "to",
-            u'Onyomi': "from"
-        }
+        # todo: write about warnings
+        # Fields that should be merged
+        self.fields_to_merge = [
+            u'Merge1',
+            u'Merge2',
+            u'Merge3',
+            u'Merge4'
+        ]
 
         # --------------------- TAG MERGE MODES -------------------------------
 
+        # todo: explain
         # Mode to merge the tags of the from notes and to notes. Choose from
         # 3 modes:
         # *  ```from```
@@ -79,6 +77,10 @@ class MergeNotes(object):
         # to separate them? Default is '<br>' (HTML line break)
         self.merge_join_string = "<br>"
 
+        # Try to remove empty field contents, which only have (supposedly)
+        # invisible HTML content
+        self.remove_html_ghost_field_content = True
+
         # @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
         #                       END CONFIGURATION
         # @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -93,7 +95,7 @@ class MergeNotes(object):
         browser.form.menuEdit.addAction(a)
         browser.connect(a, SIGNAL("triggered()"), self.loop)
 
-    def get_match_field(self, nid):
+    def get_match_field_from_nid(self, nid):
         note = mw.col.getNote(nid)
         expr = note[self.match_field]
         if not isinstance(expr, (str, unicode)):
@@ -102,9 +104,17 @@ class MergeNotes(object):
             expr = stripHTML(expr).strip()
         return expr
 
+    @staticmethod
+    def get_nids_with_tag(tag):
+        return mw.col.findNotes(u'tag:"{}"'.format(tag))
+
+    @staticmethod
+    def get_notes_from_nids(nids):
+        return [mw.col.getNote(nid) for nid in nids]
+
     def loop(self, *arsg, **kwargs):
-        nids_from = mw.col.findNotes(u'tag:"{}"'.format(self.tag_from))
-        nids_to = mw.col.findNotes(u'tag:"{}"'.format(self.tag_to))
+        nids_from = self.get_nids_with_tag(self.tag_from)
+        nids_to = self.get_nids_with_tag(self.tag_to)
 
         logger.debug("Found {} notes with tag_from {}".format(len(nids_from),
                                                               self.tag_from))
@@ -118,138 +128,99 @@ class MergeNotes(object):
         nids_to_dict = defaultdict(list)
 
         for nid in nids_from:
-            nids_from_dict[self.get_match_field(nid)].append(nid)
+            nids_from_dict[self.get_match_field_from_nid(nid)].append(nid)
 
         for nid in nids_to:
-            nids_to_dict[self.get_match_field(nid)].append(nid)
+            nids_to_dict[self.get_match_field_from_nid(nid)].append(nid)
 
         # Remove None (corresponds to not properly retrieved expressions)
         del nids_from_dict[None]
         del nids_to_dict[None]
 
-        ok = []
-        zero_from = []      # nothing to update, that's ok
-        zero_to = []        # bad, don't have a candidate to merge into
-        many_from = []      # bad
-        many_to = []        # bad, too many candidates to merge into
+        all_exprs = list(nids_from_dict.keys()) + list(nids_to_dict.keys())
 
-        for expr in list(nids_to_dict.keys()) + list(nids_from_dict.keys()):
-            num_from = len(nids_from_dict[expr])
-            num_to = len(nids_to_dict[expr])
-            if num_from == 0:
-                zero_from.append(expr)
-            elif num_from >= 2:
-                many_from.append(expr)
+        all_notes = []
+        for expr in all_exprs:
+            notes_from = self.get_notes_from_nids(nids_from_dict[expr])
+            notes_to = self.get_notes_from_nids(nids_to_dict[expr])
+            for note_to in notes_to:
+                self.merge_notes(notes_from, note_to)
+            all_notes.extend(notes_from)
+            all_notes.extend(notes_to)
 
-            if num_to == 0:
-                zero_to.append(expr)
-            elif num_to >= 2:
-                many_to.append(expr)
+        # Write only now that we know everything runs without error
+        # Note that we have to write notes_from too, because we have added
+        # a tag to them
+        for note in all_notes:
+            note.flush()
 
-            if num_from == 1 and num_to == 1:
-                ok.append(expr)
+    def merge_notes(self, notes_from, note_to):
+        self.merge_fields(notes_from, note_to)
+        self.merge_tags(notes_from, note_to)
 
-        # remove duplicates
-        ok = list(set(ok))
-        zero_from = list(set(zero_from))
-        zero_to = list(set(zero_to))
-        many_from = list(set(many_from))
-        many_to = list(set(many_to))
+    def merge_fields(self, notes_from, note_to):
+        for field in self.fields_to_merge:
+            self.merge_field(notes_from, note_to, field)
 
-        logger.debug(u"Statistics: \n"
-                     u"ok: {}\n"
-                     u"zero_from: {}\n"
-                     u"zero_to: {}\n"
-                     u"many_from: {}\n"
-                     u"many_to: {}\n".format(u', '.join(ok),
-                                             u', '.join(zero_from),
-                                             u', '.join(zero_to),
-                                             u', '.join(many_from),
-                                             u', '.join(many_to)))
-
-        if self.dry:
+    def merge_field(self, notes_from, note_to, field):
+        if field not in note_to:
+            logger.warning(
+                "Could not find field '{}' in note_to with match "
+                "field '{}'".format(field, note_to[self.match_field])
+            )
             return
+        field_to = note_to[field]
+        fields_from = []
+        for note_from in notes_from:
+            if field not in note_from:
+                logger.warning(
+                    "Could not find field '{}' in note_from with match "
+                    "field '{}'".format(field, note_to[self.match_field])
+                )
+                continue
+            fields_from.append(note_from[field])
+        note_to[field] = self.merge_field_contents(field_to + fields_from)
 
-        for expr in ok:
-            note_from = mw.col.getNote(nids_from_dict[expr][0])
-            note_to = mw.col.getNote(nids_to_dict[expr][0])
-            self.merge_notes(note_from, note_to)
-            self.merge_tags(note_from, note_to)
+    def merge_field_contents(self, field_contents):
+        # If a field contains only HTML content, should we remove it?
+        if self.remove_html_ghost_field_content:
+            for i in range(len(field_contents)):
+                if not stripHTML(field_contents[i]).strip():
+                    del field_contents[i]
 
-    def merge_notes(self, note_from, note_to):
-        missing_to = [
-            key for key in self.field_merge_modes if not key in note_to
-        ]
-        if missing_to:
-            msg = "note_to fields are missing key(s) {}".format(
-                ", ".join(missing_to)
-            )
-            logger.critical(msg)
-            raise ValueError, msg
-        missing_from = [
-            key for key in self.field_merge_modes if not key in note_from
-        ]
-        if missing_from:
-            msg = "note_from fields are missing key(s) {}".format(
-                ", ".join(missing_from)
-            )
-            logger.critical(msg)
-            raise ValueError, msg
-        for key in self.field_merge_modes.keys():
-            note_to[key] = self.merge_fields(note_from[key], note_to[key],
-                                             self.field_merge_modes[key])
-        note_to.flush()
+        return self.merge_join_string.join(field_contents)
 
-    def merge_tags(self, note_from, note_to):
-        tags_from = note_from.tags
-        tags_to = note_to.tags
-        #logger.debug(note_from[self.match_field]+"before"+ str(type(note_from.tags))+ str(list(note_from.tags))+ str(list(note_to.tags)))
+    def merge_tags(self, notes_from, note_to):
+        tags_from = []
+        for note_from in notes_from:
+            tags_from.extend(note_from.tags)
+        tags_to = list(note_to.tags)
+
         if self.tag_merge_mode == "merge":
-            new_tags_to = list(set(tags_from) | set(tags_to))
+            new_tags_to = tags_from + tags_to
         elif self.tag_merge_mode == "from":
             new_tags_to = tags_from
         elif self.tag_merge_mode == "to":
             new_tags_to = tags_to
         else:
-            raise ValueError, "Invalid merge mode for tags"
+            msg = "Invalid merge mode for tags: {}".format(self.tag_merge_mode)
+            logger.critical(msg)
+            raise ValueError, msg
+
         # IMPORTANT: do not copy the tag self.tag_from to the target note
         # also remove self.tag_to, so that we know which notes have been merged
         # and which have yet to be merged.
         for tag in [self.tag_from, self.tag_to]:
-            if tag in new_tags_to:
+            while tag in new_tags_to:
                 new_tags_to.remove(tag)
         new_tags_to.append(self.tag_was_merged_to)
-        note_to.tags = list(set(new_tags_to))
-        note_to.flush()
 
-        new_tags_from = note_from.tags
-        for tag in [self.tag_from]:
-            if tag in new_tags_from:
+        # Remove duplicates
+        note_to.tags = remove_duplicates_preserve_order(new_tags_to)
+
+        for note_from in notes_from:
+            new_tags_from = list(note_from.tags)
+            while self.tag_from in new_tags_from:
                 new_tags_from.remove(tag)
-        new_tags_from.append(self.tag_was_merged_from)
-        note_from.tags = list(set(new_tags_from))
-        note_from.flush()
-
-        #logger.debug(note_from[self.match_field]+"after"+ str(type(note_from.tags))+ str(list(note_from.tags))+ str(list(note_to.tags)))
-
-    def merge_fields(self, field_from, field_to, merge_mode):
-        if not stripHTML(field_from).strip():
-            field_from = ""
-        if not stripHTML(field_to).strip():
-            field_to = ""
-        if merge_mode == "from":
-            return field_from
-        elif merge_mode == "to":
-            return field_to
-        elif merge_mode == "merge_ft":
-            if field_from and field_to:
-                return field_from + self.merge_join_string + field_to
-            else:
-                return field_from + field_to
-        elif merge_mode == "merge_tf":
-            if field_from and field_to:
-                return field_to + self.merge_join_string + field_from
-            else:
-                return field_to + field_from
-        else:
-            raise ValueError
+            new_tags_from.append(self.tag_was_merged_from)
+            note_from.tags = remove_duplicates_preserve_order(new_tags_from)
