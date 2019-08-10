@@ -58,8 +58,6 @@ class MergeNotes(object):
         # value (i.e. notes with match_field "<b>Test</b>" and "Test" are
         # still recognized to be merged
         self.strip_html = True
-        # Permanently strip the html of the self.match_field
-        self.strip_html_permanently = True
 
         # --------------------- RUN CONTROL -----------------------------------
 
@@ -104,20 +102,6 @@ class MergeNotes(object):
 
         logger.debug("Found {} notes with tag_to {}".format(len(nids_to),
                                                               self.tag_to))
-
-        if self.strip_html_permanently and not self.dry:
-            logger.debug("Stripping HTML from match field from all notes")
-            for nid in nids_from + nids_to:
-                note = mw.col.getNote(nid)
-                old = note[self.match_field]
-                if not isinstance(old, (str, unicode)):
-                    continue
-                new = stripHTML(old).strip()
-                if not old == new:
-                    logger.debug(u"Changed match field from {} to {}".format(
-                        old, new))
-                    note[self.match_field] = new
-                    note.flush()
 
         logger.debug("looping to build db")
 
