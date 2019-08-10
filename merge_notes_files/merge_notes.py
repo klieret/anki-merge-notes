@@ -28,10 +28,10 @@ class MergeNotes(object):
         # todo: write about warnings
         # Fields that should be merged
         self.fields_to_merge = [
-            u'Merge1',
-            u'Merge2',
-            u'Merge3',
-            u'Merge4'
+            u'merge1',
+            u'merge2',
+            u'merge3',
+            u'merge4'
         ]
 
         # --------------------- TAG MERGE MODES -------------------------------
@@ -221,6 +221,6 @@ class MergeNotes(object):
         for note_from in notes_from:
             new_tags_from = list(note_from.tags)
             while self.tag_from in new_tags_from:
-                new_tags_from.remove(tag)
+                new_tags_from.remove(self.tag_from)
             new_tags_from.append(self.tag_was_merged_from)
             note_from.tags = remove_duplicates_preserve_order(new_tags_from)
