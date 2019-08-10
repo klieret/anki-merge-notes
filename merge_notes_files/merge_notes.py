@@ -48,7 +48,7 @@ class MergeNotes(object):
         # Note that the special tags defined below will be set automatically.
         self.tag_merge_mode = "merge"
 
-        # --------------------- MATCH CONTROL-- -------------------------------
+        # --------------------- MATCH CONTROL ---------------------------------
 
         # Which field should be compared to find out which notes should be
         # merged together?
@@ -61,23 +61,29 @@ class MergeNotes(object):
         # Permanently strip the html of the self.match_field
         self.strip_html_permanently = True
 
-        # --------------------- RUN CONTROL-- -------------------------------
+        # --------------------- RUN CONTROL -----------------------------------
 
         # Dry run: Only compare notes and display which notes can be merged,
         # but do not do any merging
         self.dry = False
 
-        # @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-        #                       END CONFIGURATION
-        # @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        # --------------------- ADVANCED --------------------------------------
 
-        # Those two tags controll which notes are from notes and which are
+        # These two tags controll which notes are from notes and which are
         # to notes. If a note either acted as a to_note or from_note, the
-        # respective tag is replaced with the two tags below.
+        # respective tag is replaced with the two tags after.
         self.tag_from = u"MERGE_FROM"
         self.tag_to = u"MERGE_TO"
         self.tag_was_merged_from = u"WAS_MERGED_FROM"
         self.tag_was_merged_to = u"WAS_MERGED_TO"
+
+        # When merging multiple field contents into one, which string is used
+        # to separate them? Default is '<br>' (HTML line break)
+        self.merge_join_string = "<br>"
+
+        # @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        #                       END CONFIGURATION
+        # @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
     def setup_menu(self, browser):
         """ Adds a menu item to Anki's browser. Will be called via hook.
@@ -242,8 +248,7 @@ class MergeNotes(object):
 
         #logger.debug(note_from[self.match_field]+"after"+ str(type(note_from.tags))+ str(list(note_from.tags))+ str(list(note_to.tags)))
 
-    @staticmethod
-    def merge_fields(field_from, field_to, merge_mode):
+    def merge_fields(self, field_from, field_to, merge_mode):
         if not stripHTML(field_from).strip():
             field_from = ""
         if not stripHTML(field_to).strip():
@@ -254,12 +259,12 @@ class MergeNotes(object):
             return field_to
         elif merge_mode == "merge_ft":
             if field_from and field_to:
-                return field_from + "\n" + field_to
+                return field_from + self.merge_join_string + field_to
             else:
                 return field_from + field_to
         elif merge_mode == "merge_tf":
             if field_from and field_to:
-                return field_to + "\n" + field_from
+                return field_to + self.merge_join_string + field_from
             else:
                 return field_to + field_from
         else:
