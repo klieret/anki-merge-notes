@@ -75,7 +75,7 @@ class MergeNotes(object):
 
         # When merging multiple field contents into one, which string is used
         # to separate them? Default is '<br>' (HTML line break)
-        self.merge_join_string = "<br>"
+        self.merge_join_string = u"<br>"
 
         # Try to remove empty field contents, which only have (supposedly)
         # invisible HTML content
@@ -137,10 +137,8 @@ class MergeNotes(object):
         nids_from_dict.pop(None, None)
         nids_to_dict.pop(None, None)
 
-        all_exprs = list(nids_from_dict.keys()) + list(nids_to_dict.keys())
-
         all_notes = []
-        for expr in all_exprs:
+        for expr in nids_to_dict:
             notes_from = self.get_notes_from_nids(nids_from_dict[expr])
             notes_to = self.get_notes_from_nids(nids_to_dict[expr])
             for note_to in notes_to:
@@ -179,7 +177,7 @@ class MergeNotes(object):
                 )
                 continue
             fields_from.append(note_from[field])
-        note_to[field] = self.merge_field_contents(field_to + fields_from)
+        note_to[field] = self.merge_field_contents([field_to] + fields_from)
 
     def merge_field_contents(self, field_contents):
         # If a field contains only HTML content, should we remove it?
