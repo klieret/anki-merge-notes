@@ -182,11 +182,14 @@ class MergeNotes(object):
     def merge_field_contents(self, field_contents):
         # If a field contains only HTML content, should we remove it?
         if self.remove_html_ghost_field_content:
-            for i in range(len(field_contents)):
-                if not stripHTML(field_contents[i]).strip():
-                    del field_contents[i]
+            real_field_contents = [
+                field_content for field_content in field_contents 
+                if stripHTML(field_content)
+            ]
+        else:
+            real_field_contents = field_contents
 
-        return self.merge_join_string.join(field_contents)
+        return self.merge_join_string.join(real_field_contents)
 
     def merge_tags(self, notes_from, note_to):
         tags_from = []
