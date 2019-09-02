@@ -81,6 +81,9 @@ class MergeNotes(object):
         # invisible HTML content
         self.remove_html_ghost_field_content = True
 
+        # Remove trailing line break
+        self.remove_trailing_br = True
+
         # @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
         #                       END CONFIGURATION
         # @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -190,14 +193,17 @@ class MergeNotes(object):
     def merge_field_contents(self, field_contents):
         # If a field contains only HTML content, should we remove it?
         if self.remove_html_ghost_field_content:
-            real_field_contents = [
+            field_contents = [
                 field_content for field_content in field_contents 
                 if stripHTML(field_content)
             ]
-        else:
-            real_field_contents = field_contents
+        if self.remove_trailing_br:
+            field_contents = [
+                field_content[:-4] for field_content in field_contents
+                if field_content.lower().endswith("<br>")
+            ]
 
-        return self.merge_join_string.join(real_field_contents)
+        return self.merge_join_string.join(field_contents)
 
     def merge_tags(self, notes_from, note_to):
         tags_from = []
