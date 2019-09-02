@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from aqt import mw
-from aqt.qt import QAction, SIGNAL
+from aqt.qt import QAction
 from anki.utils import stripHTML
 from .log import logger
 from collections import defaultdict
@@ -93,11 +93,14 @@ class MergeNotes(object):
         logger.debug("Setting up menu.")
         a = QAction("Merge Notes", browser)
         browser.form.menuEdit.addAction(a)
-        browser.connect(a, SIGNAL("triggered()"), self.loop)
+        a.triggered.connect(self.loop)
 
     def get_match_field_from_nid(self, nid):
         note = mw.col.getNote(nid)
         expr = note[self.match_field]
+        if "unicode" not in globals():
+            # For Python3/python2 compatibility
+            unicode = str
         if not isinstance(expr, (str, unicode)):
             return None
         if self.strip_html:
