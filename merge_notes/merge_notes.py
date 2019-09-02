@@ -139,6 +139,11 @@ class MergeNotes(object):
 
         all_notes = []
         for expr in nids_to_dict:
+            if expr is None:
+                # If we can't properly get the match field,
+                # self.get_match_field_from_nid will return None and we skip
+                # here.
+                continue
             notes_from = self.get_notes_from_nids(nids_from_dict[expr])
             notes_to = self.get_notes_from_nids(nids_to_dict[expr])
             for note_to in notes_to:
