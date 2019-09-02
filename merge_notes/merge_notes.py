@@ -206,7 +206,7 @@ class MergeNotes(object):
         else:
             msg = "Invalid merge mode for tags: {}".format(self.tag_merge_mode)
             logger.critical(msg)
-            raise ValueError, msg
+            raise ValueError(msg)
 
         # IMPORTANT: do not copy the tag self.tag_from to the target note
         # also remove self.tag_to, so that we know which notes have been merged
